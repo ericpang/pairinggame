@@ -184,8 +184,22 @@ service firebase.storage {
      ```
      http://localhost:8080
      ```
-   - Connect your mobile device to the same network (or host on Firebase Hosting).
+   - Connect your mobile device to the same network.
    - Scan the on-screen QR code with your phone camera to join the session.
+
+---
+
+### 🌐 Deploying to GitHub Pages
+
+The repository includes a automated GitHub Actions workflow (`.github/workflows/deploy.yml`) that publishes the game to GitHub Pages on every push to `main` or `master`.
+
+#### One-Time Setup in GitHub:
+1. Push your repository to GitHub.
+2. In your GitHub repository, navigate to **Settings** > **Pages** (under "Code and automation" in the left sidebar).
+3. Under **Build and deployment**:
+   - For **Source**, select **GitHub Actions**.
+4. Push any commit to `main` (or trigger manually under the **Actions** tab by selecting **Deploy to GitHub Pages** > **Run workflow**).
+5. Once complete, your game will be live at `https://<your-username>.github.io/<repo-name>/`!
 
 ---
 
