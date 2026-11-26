@@ -2,7 +2,7 @@
 // Mobile Player client controller & touch-optimized interface
 
 import { GameManager } from "./game.js";
-import { ensureAuth, db, ref, set, serverTimestamp, onDisconnect } from "./firebase-init.js";
+import { ensureAuth, db, ref, get, set, serverTimestamp, onDisconnect } from "./firebase-init.js";
 import { renderPattern } from "./graphics.js";
 
 export class PlayerController {
@@ -76,7 +76,25 @@ export class PlayerController {
         this.btnJoin.textContent = 'Joining Room...';
 
         try {
-            // Register player profile in Firebase Realtime Database
+            // 1. Ensure user is authenticated
+            if (!this.user) {
+                this.user = await ensureAuth();
+            }
+
+            // 2. Verify room exists and is joinable
+            const metaRef = ref(db, `pairs/${this.roomCode}/meta`);
+            const metaSnap = await get(metaRef);
+
+            if (!metaSnap.exists()) {
+                throw new Error(`Room "${this.roomCode}" was not found. Please make sure the Host has opened the game board.`);
+            }
+
+            const meta = metaSnap.val();
+            if (meta.open === false && meta.status !== 'lobby') {
+                throw new Error(`Room "${this.roomCode}" is currently in-progress or closed.`);
+            }
+
+            // 3. Register player profile in Firebase Realtime Database
             const playerRef = ref(db, `pairs/${this.roomCode}/players/${this.user.uid}`);
             await set(playerRef, {
                 name: this.playerName,
@@ -86,20 +104,28 @@ export class PlayerController {
                 ts: serverTimestamp()
             });
 
-            // Set disconnect handler to mark inactive
-            onDisconnect(playerRef).update({ on: false });
+            // 4. Safely set disconnect handler
+            try {
+                onDisconnect(playerRef).update({ on: false });
+            } catch (discErr) {
+                console.warn('onDisconnect registration warning:', discErr);
+            }
 
-            // Initialize game engine as player
+            // 5. Initialize game engine as player
             this.game.init(this.user, this.roomCode, false);
 
-            // Switch to game section
+            // 6. Switch to game section
             if (this.joinSection) this.joinSection.style.display = 'none';
             if (this.gameSection) this.gameSection.style.display = 'block';
             if (this.roomBadgeEl) this.roomBadgeEl.textContent = `Room: ${this.roomCode}`;
 
         } catch (err) {
             console.error('Failed to join game:', err);
-            alert(`Could not join room ${code}. Please verify the code and try again.`);
+            let detailedMsg = err.message || 'Unknown error';
+            if (err.code === 'PERMISSION_DENIED' || detailedMsg.includes('Permission denied')) {
+                detailedMsg = 'Permission Denied: Please check database rules or connection.';
+            }
+            alert(`Could not join room ${code}:\n${detailedMsg}`);
             this.btnJoin.disabled = false;
             this.btnJoin.textContent = 'Join Game';
         }

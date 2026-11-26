@@ -138,6 +138,9 @@ export class AdminController {
 
         try {
             await this.game.hostCreateGame(count, style, mode);
+        } catch (err) {
+            console.error('Failed to create game:', err);
+            alert(`Failed to create game board:\n${err.message}`);
         } finally {
             if (this.btnNewDeck) {
                 this.btnNewDeck.disabled = false;
